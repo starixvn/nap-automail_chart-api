@@ -150,8 +150,18 @@ def render_dhwl_chart(sb_data, total_data, month="Jul", year="2025"):
     ax.grid(True, alpha=0.3)
     ax.set_axisbelow(True)
     
-    # Add legend
-    ax.legend(loc='upper center', bbox_to_anchor=(0.5, 1.02), ncol=3)
+    # Add legend with custom order: SB, Others, Total
+    handles, labels = ax.get_legend_handles_labels()
+    # Reorder the handles and labels to match desired order: SB, Others, Total
+    order = ['SB', 'Others', 'Total']
+    handles_ordered = []
+    labels_ordered = []
+    for label in order:
+        if label in labels:
+            idx = labels.index(label)
+            handles_ordered.append(handles[idx])
+            labels_ordered.append(labels[idx])
+    ax.legend(handles_ordered, labels_ordered, loc='upper center', bbox_to_anchor=(0.5, 1.02), ncol=3)
     
     # Adjust layout
     plt.tight_layout()
