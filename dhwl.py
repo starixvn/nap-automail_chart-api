@@ -117,9 +117,9 @@ def render_dhwl_chart(sb_data, total_data, month="Jul", year="2025"):
     next_tick = ((int(max_value) // 1000) + 1) * 1000
     # Ensure we show at least 2k if max is around 1.5k
     if max_value > 1000:
-        y_ticks = np.arange(0, max(next_tick, 2000) + 1000, 1000)  # Tick every 1000 units, include next tick above max
+        y_ticks = np.arange(0, max(next_tick, 2000) + 2000, 1000)  # Tick every 1000 units, include next tick above max
     else:
-        y_ticks = np.arange(0, next_tick + 1000, 1000)
+        y_ticks = np.arange(0, next_tick + 2000, 1000)
     ax.set_yticks(y_ticks)
     
     # Format y-axis to show values in thousands
