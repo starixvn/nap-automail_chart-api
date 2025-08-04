@@ -52,8 +52,16 @@ def render_dhwl_chart(sb_data, total_data, month="Jul", year="2025"):
     diff_pct = ((current_mtd - previous_mtd) / previous_mtd) * 100
     diff_pct_change = diff_pct  # Use actual calculated difference
     
-    # Create the chart with increased height (1.5 times taller)
-    fig, ax = plt.subplots(figsize=(15, 6))  # Increased height from 4 to 6 (1.5x taller)
+    # Calculate chart size based on number of figures
+    numberOfFigure = len(df)
+    height = 900
+    if numberOfFigure <= 9:
+        width = 650
+    else:
+        width = (numberOfFigure * 1920 / 31) + 50
+    
+    # Create the chart with calculated dimensions
+    fig, ax = plt.subplots(figsize=(width/100, height/100))  # Convert pixels to inches (assuming 100 DPI for calculation)
     
     # Set up the data
     days = df.index.tolist()
@@ -66,15 +74,35 @@ def render_dhwl_chart(sb_data, total_data, month="Jul", year="2025"):
     bar_width = 0.35
     x_positions = np.arange(len(days))
     
-    bars1 = ax.bar(x_positions - bar_width/2, sb_values, bar_width, label='SB', color='blue', alpha=0.6)
-    bars2 = ax.bar(x_positions + bar_width/2, others_values, bar_width, label='Others', color='orange', alpha=0.8)
+    bars1 = ax.bar(x_positions - bar_width/2, sb_values, bar_width, label='SB', color=(133/255, 184/255, 253/255), alpha=1)
+    bars2 = ax.bar(x_positions + bar_width/2, others_values, bar_width, label='Others', color=(251/255, 180/255, 64/255), alpha=1)
+    
+    # Add value labels on the SB bars
+    for i, (day, sb_value) in enumerate(zip(x_positions, sb_values)):
+        if sb_value > 0:  # Only show label if value is greater than 0
+            ax.annotate('{:.1f}k'.format(sb_value/1000), 
+                       xy=(day - bar_width/2, sb_value), 
+                       xytext=(0, 5), 
+                       textcoords='offset points',
+                       ha='center', va='bottom',
+                       fontsize=14, fontweight='normal', fontfamily='Tahoma')
+    
+    # Add value labels on the Others bars
+    for i, (day, others_value) in enumerate(zip(x_positions, others_values)):
+        if others_value > 0:  # Only show label if value is greater than 0
+            ax.annotate('{:.1f}k'.format(others_value/1000), 
+                       xy=(day + bar_width/2, others_value), 
+                       xytext=(0, 5), 
+                       textcoords='offset points',
+                       ha='center', va='bottom',
+                       fontsize=14, fontweight='normal', fontfamily='Tahoma')
     
     # Create line chart for total with arrow markers
-    line = ax.plot(x_positions, total_values, '-', color='darkblue', linewidth=2, 
+    line = ax.plot(x_positions, total_values, '-', color=(0/255, 69/255, 134/255), linewidth=2, 
                    label='Total')
     # Add arrow markers at the top of the total line
-    ax.plot(x_positions, total_values, '^', color='darkblue', markersize=8, 
-            markerfacecolor='darkblue', markeredgecolor='darkblue')
+    ax.plot(x_positions, total_values, '^', color=(0/255, 69/255, 134/255), markersize=8, 
+            markerfacecolor=(0/255, 69/255, 134/255), markeredgecolor=(0/255, 69/255, 134/255))
     
     # Add value labels on the total line
     for i, (day, total) in enumerate(zip(x_positions, total_values)):
@@ -83,10 +111,10 @@ def render_dhwl_chart(sb_data, total_data, month="Jul", year="2025"):
                    xytext=(0, 10), 
                    textcoords='offset points',
                    ha='center', va='bottom',
-                   fontsize=8, fontweight='bold')
+                   fontsize=14, fontweight='normal', fontfamily='Tahoma')
     
     # Customize the chart
-    title_obj = ax.set_title('DHWL [{}-{}]'.format(month, year), fontsize=16, fontweight='bold', pad=50, y=1.1)
+    title_obj = ax.set_title('DHWL [{}-{}]'.format(month, year), fontsize=19, fontweight='bold', fontfamily='Tahoma', pad=50, y=1.1)
     
     # Add MTD information above the maximum value of y-axis
     mtd_text = 'MTD (as of {}-{}-{:02d}): {:.1f}k [{:.2f}%]\n'.format(year, month, int(max(days)), current_mtd/1000, current_mtd_pct)
@@ -99,8 +127,15 @@ def render_dhwl_chart(sb_data, total_data, month="Jul", year="2025"):
     
     # Position MTD higher and just to the right of y-axis, outside chart area like the title
     ax.text(0.01, title_y + 0.1, mtd_text, transform=ax.transAxes,
-            ha='left', va='top', fontsize=14, color='green',
-            bbox=dict(boxstyle='round', facecolor='lightgray', alpha=0.8))
+            ha='left', va='top', fontsize=19, fontweight='bold', fontfamily='Tahoma', color=(44/255, 185/255, 91/255))
+    
+    # Adjust the chart position to be 50 pixels below MTD text
+    # Convert 50 pixels to figure coordinates (assuming 300 DPI)
+    pixel_to_fig = 50 / (fig.get_dpi() * fig.get_figheight())
+    ax.set_position([ax.get_position().x0, 
+                    ax.get_position().y0 - pixel_to_fig, 
+                    ax.get_position().width, 
+                    ax.get_position().height])
     
     # Customize axes
     ax.set_xlabel('Date', fontsize=12)
@@ -147,7 +182,7 @@ def render_dhwl_chart(sb_data, total_data, month="Jul", year="2025"):
             ax.get_xticklabels()[day_index].set_color('red')
     
     # Add grid
-    ax.grid(True, alpha=0.3)
+    ax.grid(True, alpha=1)
     ax.set_axisbelow(True)
     
     # Add legend with custom order: SB, Others, Total
