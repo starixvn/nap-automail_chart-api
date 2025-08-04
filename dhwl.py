@@ -104,7 +104,7 @@ def render_dhwl_chart(sb_data, total_data, month="Jul", year="2025"):
     
     # Customize axes
     ax.set_xlabel('Date', fontsize=12)
-    ax.set_ylabel('Value', fontsize=12)
+    ax.set_ylabel('', fontsize=12)
     ax.set_xlim(-0.5, len(days) - 0.5)
     # Adjust y-axis limits to position labels lower and compress intervals
     max_value = max(total_values)
