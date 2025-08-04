@@ -1,9 +1,17 @@
 import matplotlib.pyplot as plt
-import matplotlib.dates as mdates
 import numpy as np
 import pandas as pd
-from datetime import datetime, timedelta
-import json
+from datetime import datetime
+import io
+from pydantic import BaseModel
+from typing import Dict, Union
+
+# Pydantic model for DHWL chart request
+class DHWLChartRequest(BaseModel):
+    sb_data: Dict[str, float]
+    total_data: Dict[str, float]
+    month: str = "Jul"
+    year: Union[str, int] = "2025"
 
 def render_dhwl_chart(sb_data, total_data, month="Jul", year="2025"):
     """
@@ -148,85 +156,15 @@ def render_dhwl_chart(sb_data, total_data, month="Jul", year="2025"):
     # Adjust layout
     plt.tight_layout()
     
-    return fig, ax
-
-def render_chart_from_files(sb_file='sbFigure20250728.json', total_file='totalFigure20250728.json', month="Jul", year="2025"):
-    """
-    Convenience function to render chart directly from JSON files.
+    # Save the figure to a bytes buffer
+    buffer = io.BytesIO()
+    fig.savefig(buffer, format='png', dpi=300, bbox_inches='tight')
+    buffer.seek(0)
     
-    Args:
-        sb_file (str): Path to Sportbook data JSON file
-        total_file (str): Path to Total data JSON file
-        month (str): Month abbreviation
-        year (str): Year
+    # Get the byte content
+    image_bytes = buffer.getvalue()
     
-    Returns:
-        tuple: (figure, axes) matplotlib objects
-    """
-    try:
-        with open(sb_file, 'r') as file:
-            sb_data = json.load(file)
-        with open(total_file, 'r') as file:
-            total_data = json.load(file)
-    except FileNotFoundError as e:
-        print(f"Error: File not found - {e}")
-        raise
-    except json.JSONDecodeError as e:
-        print(f"Error: Invalid JSON format - {e}")
-        raise
+    # Close the figure to free memory
+    plt.close(fig)
     
-    return render_dhwl_chart(sb_data, total_data, month, year)
-
-
-def export_chart_to_png(sb_file='sbFigure20250728.json', total_file='totalFigure20250728.json', 
-                       month="Jul", year="2025", output_filename=None, dpi=300):
-    """
-    Export DHWL chart to PNG image file.
-    
-    Args:
-        sb_file (str): Path to Sportbook data JSON file
-        total_file (str): Path to Total data JSON file
-        month (str): Month abbreviation
-        year (str): Year
-        output_filename (str): Output filename for PNG. If None, auto-generates based on month/year
-        dpi (int): Resolution of the output image
-    
-    Returns:
-        str: Path to the saved PNG file
-    """
-    try:
-        # Generate chart
-        fig, ax = render_chart_from_files(sb_file, total_file, month, year)
-        
-        # Generate filename if not provided
-        if output_filename is None:
-            output_filename = f'dhwl_chart_{month.lower()}_{year}.png'
-        
-        # Save the chart as PNG
-        plt.savefig(output_filename, dpi=dpi, bbox_inches='tight', facecolor='white')
-        print(f"Chart exported successfully: {output_filename}")
-        
-        # Close the figure to free memory
-        plt.close(fig)
-        
-        return output_filename
-        
-    except Exception as e:
-        print(f"Error exporting chart: {e}")
-        raise
-
-
-if __name__ == "__main__":
-    try:
-        # Export chart to PNG using the new function
-        output_file = export_chart_to_png(
-            sb_file='sbFigure20250728.json', 
-            total_file='totalFigure20250728.json', 
-            month="Jul", 
-            year="2025"
-        )
-        print(f"Chart exported to: {output_file}")
-        
-    except Exception as e:
-        print(f"Error: {e}")
-        exit(1) 
+    return image_bytes

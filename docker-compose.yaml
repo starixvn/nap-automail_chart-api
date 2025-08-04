@@ -1,0 +1,27 @@
+services:
+  chart-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: chart-api
+    ports:
+      - "5000:5000"
+    environment:
+      - PYTHONPATH=/app
+      - PYTHONUNBUFFERED=1
+    volumes:
+      # Mount the current directory for development (optional)
+      - .:/app
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - chart-api-network
+
+networks:
+  chart-api-network:
+    driver: bridge 
