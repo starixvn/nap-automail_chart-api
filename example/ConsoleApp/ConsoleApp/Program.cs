@@ -5,6 +5,11 @@ using ConsoleApp;
 Console.WriteLine("Hello, World!");
 
 var example = new DhwlExample();
-await example.Test();
+var fromDate = new DateTime(2025, 7, 31);
+var toDate = new DateTime(2025, 8, 3);
+for (var date = fromDate; date <= toDate; date = date.AddDays(1))
+{
+    await example.Test(date);
+}
 
 Console.WriteLine("Done. Press any key to exit...");

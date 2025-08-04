@@ -4,14 +4,14 @@ using Newtonsoft.Json;
 namespace ConsoleApp;
 public class DhwlExample
 {
-    public async Task Test()
+    public async Task Test(DateTime date)
     {
-        var sbData = await ReadJsonFileAsync<Dictionary<string, decimal>>("data/sbFigure20250728.json");
+        var sbData = await ReadJsonFileAsync<Dictionary<string, decimal>>($"data/sbFigure{date:yyyyMMdd}.json");
 
-        var totalData = await ReadJsonFileAsync<Dictionary<string, decimal>>("data/totalFigure20250728.json");
+        var totalData = await ReadJsonFileAsync<Dictionary<string, decimal>>($"data/totalFigure{date:yyyyMMdd}.json");
 
-        var month = "Jul";
-        var year = 2025;
+        var month = date.ToString("MMM");
+        var year = date.ToString("yyyy");
 
         using var httpClient = new HttpClient();
         var requestData = new
@@ -30,8 +30,8 @@ public class DhwlExample
         if (response.IsSuccessStatusCode)
         {
             var imageBytes = await response.Content.ReadAsByteArrayAsync();
-            await File.WriteAllBytesAsync("dhwl_chart.png", imageBytes);
-            Console.WriteLine("File dhwl_chart.png is created!");
+            await File.WriteAllBytesAsync($"dhwl_chart{date:yyyyMMdd}.png", imageBytes);
+            Console.WriteLine($"File dhwl_chart{date:yyyyMMdd}.png is created!");
         }
         else
         {

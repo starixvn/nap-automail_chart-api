@@ -19,12 +19,6 @@ COPY requirements.txt .
 # Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Install additional dependencies for chart rendering
-RUN pip install --no-cache-dir \
-    matplotlib==3.8.2 \
-    numpy==1.24.3 \
-    pandas==2.1.4
-
 # Copy application code
 COPY . .
 
