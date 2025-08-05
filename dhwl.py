@@ -3,28 +3,37 @@ import numpy as np
 import pandas as pd
 from datetime import datetime
 import io
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, ConfigDict
 from typing import Dict, Union
 from datetime import datetime
 import math
 
+# Constants
+SCALE = 1000
+
 # Pydantic model for DHWL chart request
 class DHWLChartRequest(BaseModel):
-    sb_data: Dict[str, float]
-    total_data: Dict[str, float]
-    month: str = "Jul"
-    year: Union[str, int] = "2025"
+    sb_data: Dict[str, float] = Field(..., alias="SbData")
+    total_data: Dict[str, float] = Field(..., alias="TotalData")
+    mtd: float = Field(..., alias="Mtd")
+    previous_mtd: float = Field(..., alias="PreviousMtd")
+    diff_mtd: str = Field(..., alias="DiffMtd")
+    margin: float = Field(..., alias="Margin")
+    previous_margin: float = Field(..., alias="PreviousMargin")
+    diff_margin: str = Field(..., alias="DiffMargin")
+    title: str = Field(..., alias="Title")
+    mtd_date: str = Field(..., alias="MtdDate")
+    previous_mtd_date: str = Field(..., alias="PreviousMtdDate")
 
-def render_dhwl_chart(sb_data, total_data, month="Jul", year="2025"):
+    model_config = ConfigDict(populate_by_name=True)
+
+def render_dhwl_chart(request: DHWLChartRequest):
     """
     Render a DHWL chart similar to the provided image.
-    
-    Args:
-        sb_data (dict): Dictionary containing daily Sportbook data
-        total_data (dict): Dictionary containing daily Total data
-        month (str): Month abbreviation (e.g., "Jul")
-        year (str): Year (e.g., "2025")
+        
     """
+    sb_data = request.sb_data
+    total_data = request.total_data
     
     # Convert data to DataFrame for easier manipulation
     df = pd.DataFrame({
@@ -47,13 +56,7 @@ def render_dhwl_chart(sb_data, total_data, month="Jul", year="2025"):
     # Calculate previous year MTD (assuming same pattern but 20% higher for demo)
     previous_mtd = current_mtd * 1.2
     
-    # Calculate percentages based on actual data
-    # For demo purposes, using realistic percentages
-    current_mtd_pct = (current_mtd / 30000) * 100  # Assuming 30k as baseline
-    previous_mtd_pct = (previous_mtd / 30000) * 100
-    diff_pct = ((current_mtd - previous_mtd) / previous_mtd) * 100
-    diff_pct_change = diff_pct  # Use actual calculated difference
-    
+    # Calculate percentages based on actual data    
     # Calculate chart size based on number of figures
     numberOfFigure = len(df)
     height = 900    
@@ -69,8 +72,7 @@ def render_dhwl_chart(sb_data, total_data, month="Jul", year="2025"):
     days = df.index.tolist()
     sb_values = df['SB'].values
     others_values = df['Others'].values
-    total_values = df['Total'].values
-    
+    total_values = df['Total'].values    
     # Create separate bar charts for SB and Others
     # Offset the bars slightly to avoid overlap
     bar_width = 0.35
@@ -89,17 +91,17 @@ def render_dhwl_chart(sb_data, total_data, month="Jul", year="2025"):
     bars2 = ax.bar(x_positions + bar_width/2, others_values, bar_width, label='Others', color=(251/255, 180/255, 64/255), alpha=1)
     
     # Create line chart for total with arrow markers
-    truncate_total_values = [truncate(total/1000, 1)*1000 for total in total_values]
+    truncate_total_values = [truncate(total/SCALE, 1)*SCALE for total in total_values]
     line = ax.plot(x_positions, truncate_total_values, '-', color=(0/255, 69/255, 134/255), linewidth=2, 
                    label='Total')
     # Add arrow markers at the top of the total line
     ax.plot(x_positions, truncate_total_values, '^', color=(0/255, 69/255, 134/255), markersize=8, 
             markerfacecolor=(0/255, 69/255, 134/255), markeredgecolor=(0/255, 69/255, 134/255))
-    
+        
     # Add value labels on the total line
     
     for i, (day, total) in enumerate(zip(x_positions, truncate_total_values)):
-        ax.annotate('{:.1f}k'.format(total/1000, 1), 
+        ax.annotate('{:.1f}k'.format(total/SCALE), 
                    xy=(day, total), 
                    xytext=(0, 10), 
                    textcoords='offset points',
@@ -107,13 +109,13 @@ def render_dhwl_chart(sb_data, total_data, month="Jul", year="2025"):
                    fontsize=14, fontweight='normal', fontfamily='Tahoma')
     
     # Customize the chart
-    title_obj = ax.set_title('DHWL [{}-{}]'.format(month, year), fontsize=19, fontweight='bold', fontfamily='Tahoma', pad=50, y=1.1)
+    title_obj = ax.set_title(request.title, fontsize=19, fontweight='bold', fontfamily='Tahoma', pad=50, y=1.1)
     
     # Add MTD information above the maximum value of y-axis
-    month_number = month_string_to_number(month)
-    mtd_text = 'MTD (as of {}-{}-{:02d}): {:.1f}k [{:.2f}%]\n'.format(year, month_number, int(max(days)), current_mtd/1000, current_mtd_pct)
-    mtd_text += 'MTD (as of {}-{}-{:02d}): {:.1f}k [{:.2f}%]\n'.format(int(year)-1, month_number, int(max(days)), previous_mtd/1000, previous_mtd_pct)
-    mtd_text += 'Diff %: {:.2f}% [+{:.2f}%]'.format(diff_pct, diff_pct_change)
+    
+    mtd_text = 'MTD (as of {}): {:.1f}k [{:.2f}%]\n'.format(request.mtd_date, request.mtd, request.margin)
+    mtd_text += 'MTD (as of {}): {:.1f}k [{:.2f}%]\n'.format(request.previous_mtd_date, request.previous_mtd, request.previous_margin)
+    mtd_text += 'Diff %: {}% [+{}%]'.format(request.diff_mtd, request.diff_margin)
     
     # Get title position and position MTD relative to it
     title_pos = title_obj.get_position()
@@ -145,17 +147,17 @@ def render_dhwl_chart(sb_data, total_data, month="Jul", year="2025"):
     # Set y-axis ticks to show proper scale (0k, 1k, 2k, etc.)
     max_value = max(total_values)
     # Calculate the next tick above max value (round up to next 1000)
-    next_tick = ((int(max_value) // 1000) + 1) * 1000
+    next_tick = ((int(max_value) // SCALE) + 1) * SCALE
     # Ensure we show at least 2k if max is around 1.5k
-    if max_value > 1000:
-        y_ticks = np.arange(0, max(next_tick, 2000) + 2000, 1000)  # Tick every 1000 units, include next tick above max
+    if max_value > SCALE:
+        y_ticks = np.arange(0, max(next_tick, 2 * SCALE) + 2 * SCALE, SCALE)  # Tick every 1000 units, include next tick above max
     else:
-        y_ticks = np.arange(0, next_tick + 2000, 1000)
+        y_ticks = np.arange(0, next_tick + 2 * SCALE, SCALE)
     ax.set_yticks(y_ticks)
     
     # Format y-axis to show values in thousands
     def format_y_axis(x, pos):
-        return '{:.0f}k'.format(x/1000)
+        return '{:.0f}k'.format(x/SCALE)
     
     ax.yaxis.set_major_formatter(plt.FuncFormatter(format_y_axis))
     
@@ -216,32 +218,21 @@ def render_dhwl_chart(sb_data, total_data, month="Jul", year="2025"):
     return image_bytes
 
 
-def safe_render_dhwl_chart(sb_data, total_data, month="Jul", year="2025"):
+def safe_render_dhwl_chart(request: DHWLChartRequest):
     """
     Safely render a DHWL chart with proper error handling and cleanup.
-    
-    Args:
-        sb_data (dict): Dictionary containing daily Sportbook data
-        total_data (dict): Dictionary containing daily Total data
-        month (str): Month abbreviation (e.g., "Jul")
-        year (str): Year (e.g., "2025")
     
     Returns:
         bytes: Image bytes if successful, None if failed
     """
     try:
-        return render_dhwl_chart(sb_data, total_data, month, year)
+        return render_dhwl_chart(request)
     except Exception as e:
         print(f"Error rendering DHWL chart: {e}")
         return None
     finally:
         # Ensure all matplotlib figures are closed
         plt.close('all')
-
-def month_string_to_number(month_str = 'Jul'):    
-    month_obj = datetime.strptime(month_str, '%b')
-    month_number = month_obj.month
-    return month_number
 
 def truncate(value, precision):
     """

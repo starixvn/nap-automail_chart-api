@@ -32,23 +32,16 @@ async def generate_dhwl_chart(request: DHWLChartRequest):
     Generate DHWL chart from provided data
     
     Args:
-        request: DHWLChartRequest containing sb_data, total_data, month, and year
+        request: DHWLChartRequest
         
     Returns:
         PNG image bytes
     """
     try:        
         with chart_render_lock:
-            # Convert year to string if it's an integer
-            year_str = str(request.year)
-            
+                        
             # Call the render function to get image bytes
-            image_bytes = safe_render_dhwl_chart(
-                sb_data=request.sb_data,
-                total_data=request.total_data,
-                month=request.month,
-                year=year_str
-            )
+            image_bytes = safe_render_dhwl_chart(request)
             
             # Return the image bytes as PNG response
             return Response(
