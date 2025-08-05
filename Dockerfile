@@ -4,6 +4,18 @@ FROM hub.nexdev.net/base/python:3.11-slim
 # Set working directory
 WORKDIR /app
 
+RUN apt-get update && apt-get install -y \
+    fontconfig \
+    --no-install-recommends \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN mkdir -p /usr/local/share/fonts/tahoma
+
+COPY tahoma.ttf /usr/local/share/fonts/tahoma/
+COPY tahomabd.ttf /usr/local/share/fonts/tahoma/
+
+RUN fc-cache -f -v
+
 # Copy requirements first for better caching
 COPY requirements.txt .
 
