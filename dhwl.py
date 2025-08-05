@@ -176,7 +176,7 @@ def render_dhwl_chart(sb_data, total_data, month="Jul", year="2025"):
             idx = labels.index(label)
             handles_ordered.append(handles[idx])
             labels_ordered.append(labels[idx])
-    ax.legend(handles_ordered, labels_ordered, loc='upper center', bbox_to_anchor=(0.5, 0.95), ncol=3)
+    ax.legend(handles_ordered, labels_ordered, loc='upper center', bbox_to_anchor=(0.5, 0.95), ncol=3, frameon=False)
     
     # Adjust layout
     plt.tight_layout()
@@ -193,3 +193,26 @@ def render_dhwl_chart(sb_data, total_data, month="Jul", year="2025"):
     plt.close(fig)
     
     return image_bytes
+
+
+def safe_render_dhwl_chart(sb_data, total_data, month="Jul", year="2025"):
+    """
+    Safely render a DHWL chart with proper error handling and cleanup.
+    
+    Args:
+        sb_data (dict): Dictionary containing daily Sportbook data
+        total_data (dict): Dictionary containing daily Total data
+        month (str): Month abbreviation (e.g., "Jul")
+        year (str): Year (e.g., "2025")
+    
+    Returns:
+        bytes: Image bytes if successful, None if failed
+    """
+    try:
+        return render_dhwl_chart(sb_data, total_data, month, year)
+    except Exception as e:
+        print(f"Error rendering DHWL chart: {e}")
+        return None
+    finally:
+        # Ensure all matplotlib figures are closed
+        plt.close('all')

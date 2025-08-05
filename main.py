@@ -3,7 +3,7 @@ from fastapi.responses import Response
 from typing import Optional
 import uvicorn
 import threading
-from dhwl import render_dhwl_chart, DHWLChartRequest
+from dhwl import safe_render_dhwl_chart, DHWLChartRequest
 
 # Khởi tạo FastAPI app
 app = FastAPI(
@@ -43,7 +43,7 @@ async def generate_dhwl_chart(request: DHWLChartRequest):
             year_str = str(request.year)
             
             # Call the render function to get image bytes
-            image_bytes = render_dhwl_chart(
+            image_bytes = safe_render_dhwl_chart(
                 sb_data=request.sb_data,
                 total_data=request.total_data,
                 month=request.month,
