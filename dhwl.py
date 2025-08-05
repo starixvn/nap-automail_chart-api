@@ -126,7 +126,7 @@ def render_dhwl_chart(sb_data, total_data, month="Jul", year="2025"):
     title_y = title_pos[1]  # Get y position of title
     
     # Position MTD higher and just to the right of y-axis, outside chart area like the title
-    ax.text(0.01, title_y + 0.1, mtd_text, transform=ax.transAxes,
+    ax.text(0.01, 1.17, mtd_text, transform=ax.transAxes,
             ha='left', va='top', fontsize=19, fontweight='bold', fontfamily='Tahoma', color=(44/255, 185/255, 91/255))
     
     # Adjust the chart position to be 50 pixels below MTD text
