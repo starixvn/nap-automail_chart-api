@@ -176,7 +176,7 @@ def render_dhwl_chart(sb_data, total_data, month="Jul", year="2025"):
             idx = labels.index(label)
             handles_ordered.append(handles[idx])
             labels_ordered.append(labels[idx])
-    ax.legend(handles_ordered, labels_ordered, loc='upper center', bbox_to_anchor=(0.5, 1.02), ncol=3)
+    ax.legend(handles_ordered, labels_ordered, loc='upper center', bbox_to_anchor=(0.5, 0.95), ncol=3)
     
     # Adjust layout
     plt.tight_layout()
