@@ -77,26 +77,6 @@ def render_dhwl_chart(sb_data, total_data, month="Jul", year="2025"):
     bars1 = ax.bar(x_positions - bar_width/2, sb_values, bar_width, label='SB', color=(133/255, 184/255, 253/255), alpha=1)
     bars2 = ax.bar(x_positions + bar_width/2, others_values, bar_width, label='Others', color=(251/255, 180/255, 64/255), alpha=1)
     
-    # Add value labels on the SB bars
-    for i, (day, sb_value) in enumerate(zip(x_positions, sb_values)):
-        if sb_value > 0:  # Only show label if value is greater than 0
-            ax.annotate('{:.1f}k'.format(sb_value/1000), 
-                       xy=(day - bar_width/2, sb_value), 
-                       xytext=(0, 5), 
-                       textcoords='offset points',
-                       ha='center', va='bottom',
-                       fontsize=14, fontweight='normal', fontfamily='Tahoma')
-    
-    # Add value labels on the Others bars
-    for i, (day, others_value) in enumerate(zip(x_positions, others_values)):
-        if others_value > 0:  # Only show label if value is greater than 0
-            ax.annotate('{:.1f}k'.format(others_value/1000), 
-                       xy=(day + bar_width/2, others_value), 
-                       xytext=(0, 5), 
-                       textcoords='offset points',
-                       ha='center', va='bottom',
-                       fontsize=14, fontweight='normal', fontfamily='Tahoma')
-    
     # Create line chart for total with arrow markers
     line = ax.plot(x_positions, total_values, '-', color=(0/255, 69/255, 134/255), linewidth=2, 
                    label='Total')
