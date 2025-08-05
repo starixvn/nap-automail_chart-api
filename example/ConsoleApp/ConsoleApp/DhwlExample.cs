@@ -38,7 +38,7 @@ public class DhwlExample
         var jsonContent = JsonConvert.SerializeObject(request);
         var content = new StringContent(jsonContent, Encoding.UTF8, "application/json");
 
-        var response = await httpClient.PostAsync("http://localhost:5000/dhwl", content);
+        var response = await httpClient.PostAsync("http://pythonchartapi.klc.nexdev.net/dhwl", content);
 
         if (response.IsSuccessStatusCode)
         {
