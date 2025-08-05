@@ -5,6 +5,7 @@ from datetime import datetime
 import io
 from pydantic import BaseModel
 from typing import Dict, Union
+from datetime import datetime
 
 # Pydantic model for DHWL chart request
 class DHWLChartRequest(BaseModel):
@@ -54,7 +55,7 @@ def render_dhwl_chart(sb_data, total_data, month="Jul", year="2025"):
     
     # Calculate chart size based on number of figures
     numberOfFigure = len(df)
-    height = 900
+    height = 900    
     if numberOfFigure <= 9:
         width = 650
     else:
@@ -72,6 +73,15 @@ def render_dhwl_chart(sb_data, total_data, month="Jul", year="2025"):
     # Create separate bar charts for SB and Others
     # Offset the bars slightly to avoid overlap
     bar_width = 0.35
+    if len(days) == 1:
+        bar_width = 0.2
+    elif len(days) == 2:
+        bar_width = 0.28
+    elif len(days) == 3:
+        bar_width = 0.31
+    elif len(days) == 4:
+        bar_width = 0.34
+    
     x_positions = np.arange(len(days))
     
     bars1 = ax.bar(x_positions - bar_width/2, sb_values, bar_width, label='SB', color=(133/255, 184/255, 253/255), alpha=1)
@@ -97,8 +107,9 @@ def render_dhwl_chart(sb_data, total_data, month="Jul", year="2025"):
     title_obj = ax.set_title('DHWL [{}-{}]'.format(month, year), fontsize=19, fontweight='bold', fontfamily='Tahoma', pad=50, y=1.1)
     
     # Add MTD information above the maximum value of y-axis
-    mtd_text = 'MTD (as of {}-{}-{:02d}): {:.1f}k [{:.2f}%]\n'.format(year, month, int(max(days)), current_mtd/1000, current_mtd_pct)
-    mtd_text += 'MTD (as of {}-{}-{:02d}): {:.1f}k [{:.2f}%]\n'.format(int(year)-1, month, int(max(days)), previous_mtd/1000, previous_mtd_pct)
+    month_number = month_string_to_number(month)
+    mtd_text = 'MTD (as of {}-{}-{:02d}): {:.1f}k [{:.2f}%]\n'.format(year, month_number, int(max(days)), current_mtd/1000, current_mtd_pct)
+    mtd_text += 'MTD (as of {}-{}-{:02d}): {:.1f}k [{:.2f}%]\n'.format(int(year)-1, month_number, int(max(days)), previous_mtd/1000, previous_mtd_pct)
     mtd_text += 'Diff %: {:.2f}% [+{:.2f}%]'.format(diff_pct, diff_pct_change)
     
     # Get title position and position MTD relative to it
@@ -106,7 +117,9 @@ def render_dhwl_chart(sb_data, total_data, month="Jul", year="2025"):
     title_y = title_pos[1]  # Get y position of title
     
     # Position MTD higher and just to the right of y-axis, outside chart area like the title
-    ax.text(0.01, 1.17, mtd_text, transform=ax.transAxes,
+    mtd_text_x = 0.01
+
+    ax.text(mtd_text_x, 1.17, mtd_text, transform=ax.transAxes,
             ha='left', va='top', fontsize=19, fontweight='bold', fontfamily='Tahoma', color=(44/255, 185/255, 91/255))
     
     # Adjust the chart position to be 50 pixels below MTD text
@@ -162,7 +175,7 @@ def render_dhwl_chart(sb_data, total_data, month="Jul", year="2025"):
             ax.get_xticklabels()[day_index].set_color('red')
     
     # Add grid
-    ax.grid(True, alpha=1)
+    ax.grid(True, alpha=0.3)
     ax.set_axisbelow(True)
     
     # Add legend with custom order: SB, Others, Total
@@ -176,14 +189,19 @@ def render_dhwl_chart(sb_data, total_data, month="Jul", year="2025"):
             idx = labels.index(label)
             handles_ordered.append(handles[idx])
             labels_ordered.append(labels[idx])
-    ax.legend(handles_ordered, labels_ordered, loc='upper center', bbox_to_anchor=(0.5, 0.95), ncol=3, frameon=False)
+    ax.legend(handles_ordered, labels_ordered, loc='upper center', bbox_to_anchor=(0.5, 0.98), ncol=3, frameon=False)
     
     # Adjust layout
     plt.tight_layout()
     
+    # Calculate DPI to ensure image height is always 900 pixels
+    target_height = 915
+    current_height_inches = fig.get_figheight()
+    dpi_for_target_height = target_height / current_height_inches
+    
     # Save the figure to a bytes buffer
     buffer = io.BytesIO()
-    fig.savefig(buffer, format='png', dpi=300, bbox_inches='tight')
+    fig.savefig(buffer, format='png', dpi=dpi_for_target_height, bbox_inches='tight')
     buffer.seek(0)
     
     # Get the byte content
@@ -216,3 +234,8 @@ def safe_render_dhwl_chart(sb_data, total_data, month="Jul", year="2025"):
     finally:
         # Ensure all matplotlib figures are closed
         plt.close('all')
+
+def month_string_to_number(month_str = 'Jul'):    
+    month_obj = datetime.strptime(month_str, '%b')
+    month_number = month_obj.month
+    return month_number
