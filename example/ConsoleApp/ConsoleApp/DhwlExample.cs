@@ -6,12 +6,12 @@ public class DhwlExample
 {
     public async Task Test(DateTime date)
     {
-        //var sbData = await ReadJsonFileAsync<Dictionary<string, decimal>>($"data/sbFigure{date:yyyyMMdd}.json");
+        var sbData = await ReadJsonFileAsync<Dictionary<string, decimal>>($"data/sbFigure{date:yyyyMMdd}.json");
 
-        //var totalData = await ReadJsonFileAsync<Dictionary<string, decimal>>($"data/totalFigure{date:yyyyMMdd}.json");
+        var totalData = await ReadJsonFileAsync<Dictionary<string, decimal>>($"data/totalFigure{date:yyyyMMdd}.json");
 
-        var sbData = RandomData(date.Day);
-        var totalData = RandomTotal(date, sbData);
+        //var sbData = RandomData(date.Day);
+        //var totalData = RandomTotal(date, sbData);
 
         var month = date.ToString("MMM");
         var year = date.ToString("yyyy");

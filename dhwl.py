@@ -6,6 +6,7 @@ import io
 from pydantic import BaseModel
 from typing import Dict, Union
 from datetime import datetime
+import math
 
 # Pydantic model for DHWL chart request
 class DHWLChartRequest(BaseModel):
@@ -88,15 +89,17 @@ def render_dhwl_chart(sb_data, total_data, month="Jul", year="2025"):
     bars2 = ax.bar(x_positions + bar_width/2, others_values, bar_width, label='Others', color=(251/255, 180/255, 64/255), alpha=1)
     
     # Create line chart for total with arrow markers
-    line = ax.plot(x_positions, total_values, '-', color=(0/255, 69/255, 134/255), linewidth=2, 
+    truncate_total_values = [truncate(total/1000, 1)*1000 for total in total_values]
+    line = ax.plot(x_positions, truncate_total_values, '-', color=(0/255, 69/255, 134/255), linewidth=2, 
                    label='Total')
     # Add arrow markers at the top of the total line
-    ax.plot(x_positions, total_values, '^', color=(0/255, 69/255, 134/255), markersize=8, 
+    ax.plot(x_positions, truncate_total_values, '^', color=(0/255, 69/255, 134/255), markersize=8, 
             markerfacecolor=(0/255, 69/255, 134/255), markeredgecolor=(0/255, 69/255, 134/255))
     
     # Add value labels on the total line
-    for i, (day, total) in enumerate(zip(x_positions, total_values)):
-        ax.annotate('{:.1f}k'.format(total/1000), 
+    
+    for i, (day, total) in enumerate(zip(x_positions, truncate_total_values)):
+        ax.annotate('{:.1f}k'.format(total/1000, 1), 
                    xy=(day, total), 
                    xytext=(0, 10), 
                    textcoords='offset points',
@@ -239,3 +242,11 @@ def month_string_to_number(month_str = 'Jul'):
     month_obj = datetime.strptime(month_str, '%b')
     month_number = month_obj.month
     return month_number
+
+def truncate(value, precision):
+    """
+    Truncates a floating-point number to a specified number of decimal places.
+    """
+    step = math.pow(10, precision)
+    tmp = math.trunc(step * value)
+    return tmp / step
