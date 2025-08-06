@@ -48,3 +48,11 @@ test/
 tests/
 *_test.py
 test_*.py
+
+# Dockerfile
+__pycache__/
+Dockerfile
+docker-compose.yaml
+.gitlab-ci.yml
+.dockerignore
+.gitignore
