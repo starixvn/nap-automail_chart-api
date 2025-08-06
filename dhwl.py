@@ -27,10 +27,15 @@ class DHWLChartRequest(BaseModel):
 
     model_config = ConfigDict(populate_by_name=True)
 
-def render_dhwl_chart(request: DHWLChartRequest):
+def prepare_data(request: DHWLChartRequest) -> pd.DataFrame:
     """
-    Render a DHWL chart similar to the provided image.
+    Prepare and process the data for chart rendering.
+    
+    Args:
+        request: DHWLChartRequest object containing the data
         
+    Returns:
+        pd.DataFrame: Processed data with SB, Total, and Others columns
     """
     sb_data = request.sb_data
     total_data = request.total_data
@@ -51,8 +56,18 @@ def render_dhwl_chart(request: DHWLChartRequest):
     df = df.dropna()
     df = df.sort_index()
     
-    # Calculate percentages based on actual data    
-    # Calculate chart size based on number of figures
+    return df
+
+def calculate_chart_dimensions(df: pd.DataFrame) -> tuple[int, int]:
+    """
+    Calculate chart dimensions based on the number of data points.
+    
+    Args:
+        df: DataFrame containing the chart data
+        
+    Returns:
+        tuple: (width, height) in pixels
+    """
     numberOfFigure = len(df)
     height = 900    
     if numberOfFigure <= 9:
@@ -60,41 +75,66 @@ def render_dhwl_chart(request: DHWLChartRequest):
     else:
         width = (numberOfFigure * 1920 / 31) + 50
     
-    # Create the chart with calculated dimensions
-    fig, ax = plt.subplots(figsize=(width/100, height/100))  # Convert pixels to inches (assuming 100 DPI for calculation)
+    return width, height
+
+def calculate_bar_width(days_count: int) -> float:
+    """
+    Calculate appropriate bar width based on number of days.
     
-    # Set up the data
-    days = df.index.tolist()
+    Args:
+        days_count: Number of days in the data
+        
+    Returns:
+        float: Bar width value
+    """
+    if days_count == 1:
+        return 0.2
+    elif days_count == 2:
+        return 0.28
+    elif days_count == 3:
+        return 0.31
+    elif days_count == 4:
+        return 0.34
+    else:
+        return 0.35
+
+def create_bars_and_line(ax, df: pd.DataFrame, x_positions: np.ndarray, bar_width: float):
+    """
+    Create the bars and line chart elements.
+    
+    Args:
+        ax: Matplotlib axes object
+        df: DataFrame containing the chart data
+        x_positions: Array of x positions for bars
+        bar_width: Width of the bars
+    """
     sb_values = df['SB'].values
     others_values = df['Others'].values
-    total_values = df['Total'].values    
-    # Create separate bar charts for SB and Others
-    # Offset the bars slightly to avoid overlap
-    bar_width = 0.35
-    if len(days) == 1:
-        bar_width = 0.2
-    elif len(days) == 2:
-        bar_width = 0.28
-    elif len(days) == 3:
-        bar_width = 0.31
-    elif len(days) == 4:
-        bar_width = 0.34
+    total_values = df['Total'].values
     
-    x_positions = np.arange(len(days))
-    
+    # Create bars for SB and Others
     bars1 = ax.bar(x_positions - bar_width/2, sb_values, bar_width, label='SB', color=(133/255, 184/255, 253/255), alpha=1)
     bars2 = ax.bar(x_positions + bar_width/2, others_values, bar_width, label='Others', color=(251/255, 180/255, 64/255), alpha=1)
     
     # Create line chart for total with arrow markers
     truncate_total_values = [truncate(total/SCALE, 1)*SCALE for total in total_values]
-    line = ax.plot(x_positions, truncate_total_values, '-', color=(0/255, 69/255, 134/255), linewidth=2, 
-                   label='Total')
+    line = ax.plot(x_positions, truncate_total_values, '-', color=(0/255, 69/255, 134/255), linewidth=2, label='Total')
+    
     # Add arrow markers at the top of the total line
     ax.plot(x_positions, truncate_total_values, '^', color=(0/255, 69/255, 134/255), markersize=8, 
             markerfacecolor=(0/255, 69/255, 134/255), markeredgecolor=(0/255, 69/255, 134/255))
-        
-    # Add value labels on the total line
     
+    return truncate_total_values
+
+def add_value_labels(ax, x_positions: np.ndarray, truncate_total_values: list):
+    """
+    Add value labels on the total line.
+    
+    Args:
+        ax: Matplotlib axes object
+        x_positions: Array of x positions
+        truncate_total_values: List of truncated total values
+    """
     for i, (day, total) in enumerate(zip(x_positions, truncate_total_values)):
         ax.annotate('{:.1f}k'.format(total/SCALE), 
                    xy=(day, total), 
@@ -102,88 +142,111 @@ def render_dhwl_chart(request: DHWLChartRequest):
                    textcoords='offset points',
                    ha='center', va='bottom',
                    fontsize=14, fontweight='normal', fontfamily='Tahoma')
+
+def add_title_and_mtd_info(ax, request: DHWLChartRequest, fig):
+    """
+    Add title and MTD information to the chart.
     
-    # Customize the chart
+    Args:
+        ax: Matplotlib axes object
+        request: DHWLChartRequest object
+        fig: Matplotlib figure object
+    """
+    # Add title
     title_obj = ax.set_title(request.title, fontsize=19, fontweight='bold', fontfamily='Tahoma', pad=50, y=1.1)
     
-    # Add MTD information above the maximum value of y-axis
-    
+    # Add MTD information
     mtd_text = 'MTD (as of {}): {:.1f}k [{:.2f}%]\n'.format(request.mtd_date, request.mtd / SCALE, request.margin)
     mtd_text += 'MTD (as of {}): {:.1f}k [{:.2f}%]\n'.format(request.previous_mtd_date, request.previous_mtd / SCALE, request.previous_margin)
     mtd_text += 'Diff %: {} [{}]'.format(request.diff_mtd, request.diff_margin)
     
-    # Get title position and position MTD relative to it
-    title_pos = title_obj.get_position()
-    title_y = title_pos[1]  # Get y position of title
-    
-    # Position MTD higher and just to the right of y-axis, outside chart area like the title
+    # Position MTD text
     mtd_text_x = 0.01
-
     ax.text(mtd_text_x, 1.17, mtd_text, transform=ax.transAxes,
             ha='left', va='top', fontsize=19, fontweight='bold', fontfamily='Tahoma', color=(44/255, 185/255, 91/255))
     
-    # Adjust the chart position to be 50 pixels below MTD text
-    # Convert 50 pixels to figure coordinates (assuming 300 DPI)
+    # Adjust chart position
     pixel_to_fig = 50 / (fig.get_dpi() * fig.get_figheight())
     ax.set_position([ax.get_position().x0, 
                     ax.get_position().y0 - pixel_to_fig, 
                     ax.get_position().width, 
                     ax.get_position().height])
+
+def configure_axes(ax, days: list, total_values: list):
+    """
+    Configure axes properties including labels, limits, and ticks.
     
-    # Customize axes
+    Args:
+        ax: Matplotlib axes object
+        days: List of day values
+        total_values: List of total values
+    """
+    # Set labels
     ax.set_xlabel('Date', fontsize=12)
     ax.set_ylabel('', fontsize=12)
+    
+    # Set x-axis limits and ticks
     ax.set_xlim(-0.5, len(days) - 0.5)
-    # Adjust y-axis limits to position labels lower and compress intervals
+    ax.set_xticks(range(len(days)))
+    ax.set_xticklabels(days)
+    
+    # Set y-axis limits and ticks
     max_value = max(total_values)
-    y_max = max_value * 0.15  # Much further reduce limit to make intervals very tall
+    y_max = max_value * 0.15
     ax.set_ylim(0, y_max)
     
-    # Set y-axis ticks to show proper scale (0k, 1k, 2k, etc.)
-    max_value = max(total_values)
-    # Calculate the next tick above max value (round up to next 1000)
+    # Calculate y-axis ticks
     next_tick = ((int(max_value) // SCALE) + 1) * SCALE
-    # Ensure we show at least 2k if max is around 1.5k
     if max_value > SCALE:        
         decimal_part = max_value % SCALE
         more_tick = 2 if decimal_part > 500 else 1
-        y_ticks = np.arange(0, max(next_tick, 2 * SCALE) + more_tick * SCALE, SCALE)  # Tick every 1000 units, include next tick above max
+        y_ticks = np.arange(0, max(next_tick, 2 * SCALE) + more_tick * SCALE, SCALE)
     else:
         y_ticks = np.arange(0, next_tick + 2 * SCALE, SCALE)
     ax.set_yticks(y_ticks)
-        
+    
     # Format y-axis to show values in thousands
     def format_y_axis(x, pos):
         return '{:.0f}k'.format(x/SCALE)
     
     ax.yaxis.set_major_formatter(plt.FuncFormatter(format_y_axis))
+
+def highlight_weekends(ax, days: list, mtd_date_str: str):
+    """
+    Highlight weekend days in red on the x-axis.
     
-    # Set x-axis ticks
-    ax.set_xticks(x_positions)
-    ax.set_xticklabels(days)
-    
-    # Highlight weekends (Saturdays and Sundays) in red
-    mtd_date = datetime.strptime(request.mtd_date, '%Y-%m-%d')    
+    Args:
+        ax: Matplotlib axes object
+        days: List of day values
+        mtd_date_str: MTD date string
+    """
+    mtd_date = datetime.strptime(mtd_date_str, '%Y-%m-%d')    
     highlighted_days = []
     for day in days:
-        # Calculate the date for July 2025
+        # Calculate the date for the month
         date = datetime(mtd_date.year, mtd_date.month, int(day))        
         # Check if it's Saturday (5) or Sunday (6)
-        if date.weekday() >= 5:  # Saturday = 5, Sunday = 6
+        if date.weekday() >= 5:
             highlighted_days.append(day)
     
     for day in highlighted_days:
         if day in days:
             day_index = days.index(day)
             ax.get_xticklabels()[day_index].set_color('red')
+
+def add_grid_and_legend(ax):
+    """
+    Add grid and legend to the chart.
     
+    Args:
+        ax: Matplotlib axes object
+    """
     # Add grid
     ax.grid(True, alpha=0.3)
     ax.set_axisbelow(True)
     
     # Add legend with custom order: SB, Others, Total
     handles, labels = ax.get_legend_handles_labels()
-    # Reorder the handles and labels to match desired order: SB, Others, Total
     order = ['SB', 'Others', 'Total']
     handles_ordered = []
     labels_ordered = []
@@ -193,10 +256,17 @@ def render_dhwl_chart(request: DHWLChartRequest):
             handles_ordered.append(handles[idx])
             labels_ordered.append(labels[idx])
     ax.legend(handles_ordered, labels_ordered, loc='upper center', bbox_to_anchor=(0.5, 0.98), ncol=3, frameon=False)
+
+def save_chart_to_bytes(fig) -> bytes:
+    """
+    Save the chart to bytes buffer.
     
-    # Adjust layout
-    plt.tight_layout()
-    
+    Args:
+        fig: Matplotlib figure object
+        
+    Returns:
+        bytes: Image bytes
+    """
     # Calculate DPI to ensure image height is always 900 pixels
     target_height = 915
     current_height_inches = fig.get_figheight()
@@ -214,6 +284,51 @@ def render_dhwl_chart(request: DHWLChartRequest):
     plt.close(fig)
     
     return image_bytes
+
+def render_dhwl_chart(request: DHWLChartRequest):
+    """
+    Render a DHWL chart similar to the provided image.
+    """
+    # Prepare data
+    df = prepare_data(request)
+    
+    # Calculate dimensions
+    width, height = calculate_chart_dimensions(df)
+    
+    # Create the chart with calculated dimensions
+    fig, ax = plt.subplots(figsize=(width/100, height/100))
+    
+    # Set up the data
+    days = df.index.tolist()
+    total_values = df['Total'].values
+    
+    # Calculate bar width
+    bar_width = calculate_bar_width(len(days))
+    x_positions = np.arange(len(days))
+    
+    # Create bars and line
+    truncate_total_values = create_bars_and_line(ax, df, x_positions, bar_width)
+    
+    # Add value labels
+    add_value_labels(ax, x_positions, truncate_total_values)
+    
+    # Add title and MTD info
+    add_title_and_mtd_info(ax, request, fig)
+    
+    # Configure axes
+    configure_axes(ax, days, total_values)
+    
+    # Highlight weekends
+    highlight_weekends(ax, days, request.mtd_date)
+    
+    # Add grid and legend
+    add_grid_and_legend(ax)
+    
+    # Adjust layout
+    plt.tight_layout()
+    
+    # Save and return
+    return save_chart_to_bytes(fig)
 
 
 def safe_render_dhwl_chart(request: DHWLChartRequest):
