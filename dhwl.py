@@ -51,11 +51,6 @@ def render_dhwl_chart(request: DHWLChartRequest):
     df = df.dropna()
     df = df.sort_index()
     
-    # Calculate MTD values
-    current_mtd = df['Total'].sum()
-    # Calculate previous year MTD (assuming same pattern but 20% higher for demo)
-    previous_mtd = current_mtd * 1.2
-    
     # Calculate percentages based on actual data    
     # Calculate chart size based on number of figures
     numberOfFigure = len(df)
@@ -113,9 +108,9 @@ def render_dhwl_chart(request: DHWLChartRequest):
     
     # Add MTD information above the maximum value of y-axis
     
-    mtd_text = 'MTD (as of {}): {:.1f}k [{:.2f}%]\n'.format(request.mtd_date, request.mtd, request.margin)
-    mtd_text += 'MTD (as of {}): {:.1f}k [{:.2f}%]\n'.format(request.previous_mtd_date, request.previous_mtd, request.previous_margin)
-    mtd_text += 'Diff %: {}% [+{}%]'.format(request.diff_mtd, request.diff_margin)
+    mtd_text = 'MTD (as of {}): {:.1f}k [{:.2f}%]\n'.format(request.mtd_date, request.mtd / SCALE, request.margin)
+    mtd_text += 'MTD (as of {}): {:.1f}k [{:.2f}%]\n'.format(request.previous_mtd_date, request.previous_mtd / SCALE, request.previous_margin)
+    mtd_text += 'Diff %: {} [{}]'.format(request.diff_mtd, request.diff_margin)
     
     # Get title position and position MTD relative to it
     title_pos = title_obj.get_position()
