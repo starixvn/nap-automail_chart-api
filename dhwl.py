@@ -163,10 +163,11 @@ def render_dhwl_chart(request: DHWLChartRequest):
     ax.set_xticklabels(days)
     
     # Highlight weekends (Saturdays and Sundays) in red
+    mtd_date = datetime.strptime(request.mtd_date, '%Y-%m-%d')    
     highlighted_days = []
     for day in days:
         # Calculate the date for July 2025
-        date = datetime(2025, 7, int(day))
+        date = datetime(mtd_date.year, mtd_date.month, int(day))        
         # Check if it's Saturday (5) or Sunday (6)
         if date.weekday() >= 5:  # Saturday = 5, Sunday = 6
             highlighted_days.append(day)
