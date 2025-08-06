@@ -149,12 +149,14 @@ def render_dhwl_chart(request: DHWLChartRequest):
     # Calculate the next tick above max value (round up to next 1000)
     next_tick = ((int(max_value) // SCALE) + 1) * SCALE
     # Ensure we show at least 2k if max is around 1.5k
-    if max_value > SCALE:
-        y_ticks = np.arange(0, max(next_tick, 2 * SCALE) + 2 * SCALE, SCALE)  # Tick every 1000 units, include next tick above max
+    if max_value > SCALE:        
+        decimal_part = max_value % SCALE
+        more_tick = 2 if decimal_part > 500 else 1
+        y_ticks = np.arange(0, max(next_tick, 2 * SCALE) + more_tick * SCALE, SCALE)  # Tick every 1000 units, include next tick above max
     else:
         y_ticks = np.arange(0, next_tick + 2 * SCALE, SCALE)
     ax.set_yticks(y_ticks)
-    
+        
     # Format y-axis to show values in thousands
     def format_y_axis(x, pos):
         return '{:.0f}k'.format(x/SCALE)

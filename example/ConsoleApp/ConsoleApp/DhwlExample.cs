@@ -32,13 +32,13 @@ public class DhwlExample
 {
     public async Task Test(DateTime date)
     {
-        var request = ReadRequest(date);
+        var request = ReadHouseRequest(date);
         using var httpClient = new HttpClient();
        
         var jsonContent = JsonConvert.SerializeObject(request);
         var content = new StringContent(jsonContent, Encoding.UTF8, "application/json");
 
-        var response = await httpClient.PostAsync("http://pythonchartapi.klc.nexdev.net/dhwl", content);
+        var response = await httpClient.PostAsync("http://localhost:5000/dhwl", content);
 
         if (response.IsSuccessStatusCode)
         {
@@ -59,14 +59,18 @@ public class DhwlExample
         return JsonConvert.DeserializeObject<T>(jsonString);
     }
 
-    private DHWLChartRequest RandomRequest(int day)
+    private DHWLChartRequest ReadLicenseeRequest(DateTime date)
     {
-        var sbData = RandomData(day);
-        var totalData = RandomTotal(day, sbData);
+        var sbFile = $"data/LicenseeSb.json";
+        var totalFile = $"data/LicenseeTotal.json";
+        
+        var sbData = ReadJsonFile<Dictionary<string, double>>(sbFile);
+        var totalData = ReadJsonFile<Dictionary<string, double>>(totalFile);
+
         var request = new DHWLChartRequest
         {
-            SbData = sbData,
-            TotalData = totalData,
+            SbData = FilterDictionaryByIndex(sbData,date.Day),
+            TotalData = FilterDictionaryByIndex(totalData, date.Day),
             Mtd = 32.4,
             PreviousMtd = 46.0,
             DiffMtd = "-29.45",
@@ -74,63 +78,42 @@ public class DhwlExample
             PreviousMargin = 4.34,
             DiffMargin = "-5.07",
             Title = "LICENSEE DHWL [Jul-2025]",
-            MtdDate = "2025-07-31",
-            PreviousMtdDate = "2024-07-31"
+            MtdDate = $"2025-07-{date.Day:00}",
+            PreviousMtdDate = $"2024-07-{date.Day:00}"
         };
 
         return request;
     }
 
-    private DHWLChartRequest ReadRequest(DateTime date)
+    private DHWLChartRequest ReadHouseRequest(DateTime date)
     {
-        var sbFile = $"data/sbFigure{date:yyyyMMdd}.json";
-        var totalFile = $"data/totalFigure{date:yyyyMMdd}.json";
-        if(!File.Exists(sbFile) || !File.Exists(totalFile))
-        {
-            return RandomRequest(date.Day);
-        }
+        var sbFile = $"data/HouseSb.json";
+        var totalFile = $"data/HouseTotal.json";
 
         var sbData = ReadJsonFile<Dictionary<string, double>>(sbFile);
         var totalData = ReadJsonFile<Dictionary<string, double>>(totalFile);
 
         var request = new DHWLChartRequest
         {
-            SbData = sbData,
-            TotalData = totalData,
+            SbData = FilterDictionaryByIndex(sbData, date.Day),
+            TotalData = FilterDictionaryByIndex(totalData, date.Day),
             Mtd = 32.4,
             PreviousMtd = 46.0,
             DiffMtd = "-29.45",
             Margin = 4.12,
             PreviousMargin = 4.34,
             DiffMargin = "-5.07",
-            Title = "LICENSEE DHWL [Jul-2025]",
-            MtdDate = "2025-07-31",
-            PreviousMtdDate = "2024-07-31"
+            Title = "DHWL [Jul-2025]",
+            MtdDate = $"2025-07-{date.Day:00}",
+            PreviousMtdDate = $"2024-07-{date.Day:00}"
         };
 
         return request;
     }
 
-    private Dictionary<string, double> RandomData(int day)
+    public static Dictionary<string, double> FilterDictionaryByIndex(Dictionary<string, double> dict, int index)
     {
-        var random = new Random(DateTime.Now.Millisecond);
-        var dict = new Dictionary<string, double>();
-        for (var i = 1; i <= day; i++)
-        {
-            dict[i.ToString()] = (double)(random.Next(3000,7000));
-        }
-
-        return dict;
-    }
-
-    private static Dictionary<string, double> RandomTotal(int day, Dictionary<string, double> sbData)
-    {
-        var totalData = new Dictionary<string, double>(sbData);
-        for (var i = 1; i <= day; i++)
-        {
-            totalData[i.ToString()] += (double)(i % 2 == 0 ? 500 : 1000); // Simulate some variation
-        }
-
-        return totalData;
+        return dict.Where(kvp => int.TryParse(kvp.Key, out int keyIndex) && keyIndex <= index)
+            .ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
     }
 }
