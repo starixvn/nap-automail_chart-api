@@ -191,18 +191,30 @@ def configure_axes(ax, days: list, total_values: list):
     ax.set_xticklabels(days)
     
     # Set y-axis limits and ticks
-    max_value = max(total_values)
-    y_max = max_value * 0.15
-    ax.set_ylim(0, y_max)
+    max_value = max(total_values) if total_values.size > 0 else 0
+    min_value = min(total_values) if total_values.size > 0 else 0
+
+    y_upper = max_value * 1.15 if max_value >= 0 else max_value * 0.85
+    y_lower = min_value * 1.15 if min_value < 0 else 0
     
+    if y_upper == 0 and y_lower == 0 and total_values.size > 0:
+        y_upper = max(total_values) * 1.15 if max(total_values) > 0 else 1
+
+    ax.set_ylim(y_lower, y_upper)
+
     # Calculate y-axis ticks
+    start_tick = math.floor(y_lower / SCALE) * SCALE
+    
     next_tick = ((int(max_value) // SCALE) + 1) * SCALE
-    if max_value > SCALE:        
+    if max_value > SCALE:
         decimal_part = max_value % SCALE
         more_tick = 2 if decimal_part > 500 else 1
-        y_ticks = np.arange(0, max(next_tick, 2 * SCALE) + more_tick * SCALE, SCALE)
+        end_tick = max(next_tick, 2 * SCALE) + more_tick * SCALE
     else:
-        y_ticks = np.arange(0, next_tick + 2 * SCALE, SCALE)
+        end_tick = next_tick + 2 * SCALE
+
+    end_tick = max(end_tick, y_upper)
+    y_ticks = np.arange(start_tick, end_tick, SCALE)
     ax.set_yticks(y_ticks)
     
     # Format y-axis to show values in thousands
